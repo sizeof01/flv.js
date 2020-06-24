@@ -65,6 +65,8 @@ class MP4Remuxer {
         this._mp3UseMpegAudio = !Browser.firefox;
 
         this._fillAudioTimestampGap = this._config.fixAudioTimestampGap;
+
+        this._deltaAudioTimestapGap = 0;
     }
 
     destroy() {
@@ -417,15 +419,23 @@ class MP4Remuxer {
                     }
 
                     this._audioNextDts = curRefDts + refSampleDuration;
+                    this._deltaAudioTimestapGap += sampleDuration - refSampleDuration;
+                    // Silent frame generation, if large timestamp gap detected && config.fixAudioTimestampGap
+                    if (this._deltaAudioTimestapGap > refSampleDuration && this._audioMeta.codec !== 'mp3' && this._fillAudioTimestampGap && !Browser.safari) {
+                        // We need to insert silent frames to fill timestamp gap
+                        needFillSilentFrames = true;
+                        let delta = Math.abs(sampleDuration - refSampleDuration);
+                        let frameCount = Math.floor(delta / refSampleDuration);
+                        let currentDts = dts + refSampleDuration;  // Notice: in float
+                        this._deltaAudioTimestapGap = this._deltaAudioTimestapGap % refSampleDuration;
+                    } else {
 
+                        dts = Math.floor(curRefDts);
+                        sampleDuration = Math.floor(curRefDts + refSampleDuration) - dts;
+                        this._audioNextDts = curRefDts + refSampleDuration;
+
+                    }
                 } else {
-
-                    dts = Math.floor(curRefDts);
-                    sampleDuration = Math.floor(curRefDts + refSampleDuration) - dts;
-                    this._audioNextDts = curRefDts + refSampleDuration;
-
-                }
-            } else {
                 // keep the original dts calculate algorithm for mp3
                 dts = originalDts - dtsCorrection;
 
