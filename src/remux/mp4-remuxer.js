@@ -415,8 +415,7 @@ class MP4Remuxer {
                             }
                         };
                         silentFrames.push(frame);
-                        mdatBytes += frame.size;;
-
+                        mdatBytes += frame.size;
                     }
 
                     this._audioNextDts = curRefDts + refSampleDuration;
@@ -436,9 +435,7 @@ class MP4Remuxer {
                         this._audioNextDts = curRefDts + refSampleDuration;
 
                     }
-                } else {
-                // keep the original dts calculate algorithm for mp3
-                dts = originalDts - dtsCorrection;
+                }
 
 
                 if (i !== samples.length - 1) {
@@ -569,6 +566,7 @@ class MP4Remuxer {
 
         this._onMediaSegment('audio', segment);
     }
+
 
     _remuxVideo(videoTrack, force) {
         if (this._videoMeta == null) {

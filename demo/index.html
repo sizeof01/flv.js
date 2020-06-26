@@ -100,12 +100,64 @@
                 }
             }
             player = flvjs.createPlayer(mediaDataSource, {
-                enableWorker: false,
-                lazyLoadMaxDuration: 3 * 60,
+                enableWorker: true,
+                enableStashBuffer: false,
+                stashInitialSize: 128,
                 seekType: 'range',
             });
+
+            player.last_decode_frame = 0;
+            player.err_num = 0;
+            player.on(flvjs.Events.ERROR, function (e, e2) {
+                console.log('*****************************')
+                console.log('on ERROR: ' + e + '  ' + e2);
+                console.log('*****************************')
+                flv_destroy();
+                flv_load();
+            });
+
+            player.on(flvjs.Events.STATISTICS_INFO, function (e) {
+                console.log('on STATISTICS_INFO: currentSegmentIndex:%d decodedFrames:%d, droppedFrames:%d', e.currentSegmentIndex, e.decodedFrames, e.droppedFrames);
+                if (player.last_decode_frame == e.decodedFrames && e.decodedFrames != 0) {
+                    if (player.err_num > 10) {
+                        console.log('*********Init*********');
+                        player.last_decode_frame = 0;
+                        player.err_num = 0;
+                        flv_destroy();
+                        flv_load();
+                    } else {
+                        player.err_num++;
+                        console.log('ERROR Num:'+player.err_num);
+                    }
+                } else {
+                    player.last_decode_frame = e.decodedFrames;
+                    player.err_num = 0;
+                }
+            });
+
+            // On end, reload the video
+            // https://github.com/Bilibili/flv.js/blob/master/docs/api.md#flvjsevents
+            player.on(flvjs.Events.LOADING_COMPLETE, () => {
+                console.log('Re loading the stream');
+                // Magic number for how long to wait before re-loading the stream
+                const reloadPauseInMill = 3000;
+                player.unload();
+                setTimeout(() => {
+                    flv_destroy();
+                    flv_load();
+                }, reloadPauseInMill);
+            });
+
+            element.addEventListener('waiting', (event) => {
+                console.log('Video is waiting for more data.');
+            });
+
+
+
+
             player.attachMediaElement(element);
             player.load();
+            
         }
 
         function flv_start() {
